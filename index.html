@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="app.title">ProjectHub - Gestionare Proiecte</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%231e88e5'/%3E%3Ctext x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' font-family='Arial' font-size='34' fill='white'%3EPH%3C/text%3E%3C/svg%3E" />
+</head>
+<body>
+    <!-- Auth Screen -->
+    <div id="authScreen" class="auth-screen hidden" aria-hidden="true">
+        <div class="auth-card" role="dialog" aria-modal="true">
+            <div class="auth-logo"><i class="fas fa-project-diagram"></i> ProjectHub</div>
+            <h2>Autentificare</h2>
+            <p class="auth-subtitle">Conectează-te pentru a accesa aplicația.</p>
+            <form id="loginForm" class="auth-form">
+                <label class="form-label" for="loginEmail">Email</label>
+                <input id="loginEmail" class="form-control" type="email" placeholder="nume@companie.com" autocomplete="email" required />
+                <label class="form-label" for="loginPassword">Parolă</label>
+                <input id="loginPassword" class="form-control" type="password" placeholder="••••••••" autocomplete="current-password" required />
+                <button id="loginSubmit" type="submit" class="btn btn--primary" style="width:100%;margin-top:12px;">Conectează-te</button>
+                <div id="loginError" class="auth-error hidden" role="alert"></div>
+            </form>
+            <div class="auth-footer" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+                <span class="text-muted" style="font-size:.9rem;">Crearea conturilor este dezactivată în aplicație.</span>
+                <button id="authForgotPassword" class="btn btn--ghost btn--sm">Recuperează parola</button>
+            </div>
+            <div class="auth-note">Securizat cu Supabase Auth. Conturile se creează doar din consola Supabase. Adaugă domeniul aplicației la Redirect URLs.</div>
+        </div>
+    </div>
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="loading-screen">
+        <div class="loading-spinner"></div>
+        <p data-i18n="loading">Se încarcă ProjectHub...</p>
+    </div>
+
+    <!-- Main App Container -->
+    <div id="app" class="app-container hidden">
+        <!-- Sidebar -->
+        <aside id="sidebar" class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-project-diagram"></i>
+                    <span class="logo-text">ProjectHub</span>
+                </div>
+                <button id="sidebarToggle" class="sidebar-toggle btn btn--secondary">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <ul class="nav-menu">
+                    <li class="nav-item">
+                        <a href="#dashboard" class="nav-link active" data-page="dashboard">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <span class="nav-text" data-i18n="page.dashboard">Dashboard</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#projects" class="nav-link" data-page="projects">
+                            <i class="fas fa-folder-open"></i>
+                            <span class="nav-text" data-i18n="page.projects">Proiecte</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#tasks" class="nav-link" data-page="tasks">
+                            <i class="fas fa-tasks"></i>
+                            <span class="nav-text" data-i18n="page.tasks">Task-uri</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#kanban" class="nav-link" data-page="kanban">
+                            <i class="fas fa-columns"></i>
+                            <span class="nav-text" data-i18n="page.kanban">Kanban</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#calendar" class="nav-link" data-page="calendar">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span class="nav-text" data-i18n="page.calendar">Calendar</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#team" class="nav-link" data-page="team">
+                            <i class="fas fa-users"></i>
+                            <span class="nav-text" data-i18n="page.team">Echipa</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#reports" class="nav-link" data-page="reports">
+                            <i class="fas fa-chart-line"></i>
+                            <span class="nav-text" data-i18n="page.reports">Rapoarte</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#notes" class="nav-link" data-page="notes">
+                            <i class="fas fa-book"></i>
+                            <span class="nav-text">Notițe</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#gantt" class="nav-link" data-page="gantt">
+                            <i class="fas fa-timeline"></i>
+                            <span class="nav-text" data-i18n="page.gantt">Gantt</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#time-tracking" class="nav-link" data-page="time-tracking">
+                            <i class="fas fa-clock"></i>
+                            <span class="nav-text" data-i18n="page.time-tracking">Time Tracking</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="theme-toggle">
+                    <button id="themeToggle" class="btn btn--secondary btn--sm">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="main-header">
+                <div class="header-left">
+                    <button id="mobileSidebarToggle" class="btn btn--secondary mobile-sidebar-toggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1 id="pageTitle" class="page-title">Dashboard</h1>
+                </div>
+                
+                <div class="header-center">
+                    <div class="search-container">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="globalSearch" class="search-input form-control" data-i18n-placeholder="search.global.placeholder" placeholder="Caută proiecte, task-uri, membri...">
+                    </div>
+                </div>
+                
+                <div class="header-right">
+                    <button id="logoutBtn" class="btn btn--secondary btn--sm hidden" title="Delogare">
+                        <i class="fas fa-right-from-bracket"></i>
+                    </button>
+                    <button id="focusModeToggle" class="btn btn--secondary btn--sm" title="Mod Focus">
+                        <i class="fas fa-eye-slash"></i>
+                    </button>
+                    <button class="btn btn--secondary btn--sm notification-btn">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-badge">3</span>
+                    </button>
+                    <button id="createNewBtn" class="btn btn--primary">
+                        <i class="fas fa-plus"></i>
+                        <span data-i18n="create.button">Creează</span>
+                    </button>
+                    <!-- Language selector -->
+                    <select id="langSelect" class="lang-select form-control" title="Language" style="width:78px;margin-left:8px;">
+                        <option value="ro">RO</option>
+                        <option value="en">EN</option>
+                    </select>
+                </div>
+            </header>
+
+            <!-- Page Content -->
+            <div class="page-content">
+                <!-- Dashboard Page -->
+                <div id="dashboardPage" class="page active">
+                    <div class="stats-grid">
+                        <div class="stat-card card">
+                            <div class="stat-icon">
+                                <i class="fas fa-project-diagram"></i>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-number" id="totalProjects">3</div>
+                                <div class="stat-label" data-i18n="stat.projects">Proiecte Active</div>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card card">
+                            <div class="stat-icon">
+                                <i class="fas fa-tasks"></i>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-number" id="totalTasks">4</div>
+                                <div class="stat-label" data-i18n="stat.tasks">Task-uri Totale</div>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card card">
+                            <div class="stat-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-number" id="completedTasks">2</div>
+                                <div class="stat-label" data-i18n="stat.completed">Task-uri Finalizate</div>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card card">
+                            <div class="stat-icon">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="stat-content">
+                                <div class="stat-number" id="teamMembers">6</div>
+                                <div class="stat-label" data-i18n="stat.team">Membri Echipă</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-grid">
+                        <div class="dashboard-left">
+                          <div class="chart-section">
+                            <div class="card">
+                                <div class="card__header">
+                                    <h3 data-i18n="chart.projects.title">Progresul Proiectelor</h3>
+                                </div>
+                                <div class="card__body">
+                                    <div class="chart-container" style="position: relative; height: 300px;">
+                                        <canvas id="projectProgressChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                          </div>
+                          <div class="upcoming-section">
+                              <div class="card">
+                                  <div class="card__header">
+                                      <h3 data-i18n="chart.deadlines.title">Deadline-uri Apropiate</h3>
+                                  </div>
+                                  <div class="card__body">
+                                      <div id="upcomingDeadlines" class="deadline-list">
+                                          <!-- Deadlines will be populated by JavaScript -->
+                                      </div>
+                                  </div>
+                              </div>
+                          </div>
+                        </div>
+                        <div class="dashboard-right">
+                          <div class="activity-section">
+                              <div class="card">
+                                  <div class="card__header">
+                                      <h3 data-i18n="chart.activity.title">Activitate Recentă</h3>
+                                  </div>
+                                  <div class="card__body">
+                                      <div id="recentActivity" class="activity-feed">
+                                          <!-- Activity items will be populated by JavaScript -->
+                                      </div>
+                                  </div>
+                              </div>
+                          </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Notes Page -->
+                <div id="notesPage" class="page">
+                    <div class="notes-container">
+                        <div class="notes-sidebar">
+                            <div class="notes-sections-header">
+                                <div class="title">Secțiuni</div>
+                                <button id="addSectionBtn" class="btn btn--sm btn--outline" title="Adaugă secțiune"><i class="fas fa-plus"></i></button>
+                            </div>
+                            <div id="notesSections" class="notes-sections"></div>
+                        </div>
+                        <div class="notes-list">
+                            <div class="notes-list-header">
+                                <input id="notesSearch" class="form-control" placeholder="Caută note..." />
+                                <button id="addNoteBtn" class="btn btn--primary"><i class="fas fa-file-circle-plus"></i> Notă nouă</button>
+                            </div>
+                            <div id="notesPages" class="notes-pages"></div>
+                        </div>
+                        <div class="notes-editor">
+                            <div class="notes-editor-header">
+                                <input id="noteTitleInput" class="form-control note-title-input" placeholder="Titlu notă" />
+                                <div class="note-meta"><span id="noteUpdatedAt"></span></div>
+                            </div>
+                            <div class="editor-toolbar">
+                                <button data-cmd="bold" title="Bold"><i class="fas fa-bold"></i></button>
+                                <button data-cmd="italic" title="Italic"><i class="fas fa-italic"></i></button>
+                                <button data-cmd="underline" title="Subliniază"><i class="fas fa-underline"></i></button>
+                                <span class="sep"></span>
+                                <button data-block="h1" title="Titlu H1">H1</button>
+                                <button data-block="h2" title="Titlu H2">H2</button>
+                                <button data-block="p" title="Paragraf">P</button>
+                                <span class="sep"></span>
+                                <button data-cmd="insertUnorderedList" title="Listă puncte"><i class="fas fa-list-ul"></i></button>
+                                <button data-cmd="insertOrderedList" title="Listă numerotată"><i class="fas fa-list-ol"></i></button>
+                                <span class="sep"></span>
+                                <button id="insertLinkBtn" title="Inserare link"><i class="fas fa-link"></i></button>
+                                <button id="clearFormatBtn" title="Curăță formatarea"><i class="fas fa-eraser"></i></button>
+                                <span class="sep"></span>
+                                <select id="noteTemplateSelect" class="form-control" style="width:160px" title="Inserează template">
+                                    <option value="">Template…</option>
+                                    <option value="meeting">Ședință</option>
+                                    <option value="decision">Decizie</option>
+                                    <option value="daily">Daily</option>
+                                </select>
+                                <button id="duplicateNoteBtn" title="Duplică nota" class="btn btn--sm btn--outline"><i class="fas fa-copy"></i></button>
+                                <button id="exportNoteBtn" title="Export HTML" class="btn btn--sm btn--outline"><i class="fas fa-file-export"></i></button>
+                            </div>
+                            <div id="noteEditor" class="editor" contenteditable="true"></div>
+                            <div class="editor-actions">
+                                <button id="deleteNoteBtn" class="btn btn--secondary"><i class="fas fa-trash"></i> Șterge nota</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Projects Page -->
+                <div id="projectsPage" class="page">
+                    <div class="page-header">
+                        <div class="page-title-section">
+                            <h2>Proiecte</h2>
+                            <p class="page-subtitle">Gestionează toate proiectele echipei</p>
+                        </div>
+                        <div class="page-actions">
+                            <button class="btn btn--outline view-toggle" data-view="grid">
+                                <i class="fas fa-th"></i>
+                            </button>
+                            <button class="btn btn--outline view-toggle active" data-view="list">
+                                <i class="fas fa-list"></i>
+                            </button>
+                            <button id="newProjectBtn" class="btn btn--primary">
+                                <i class="fas fa-plus"></i>
+                                Proiect Nou
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="projectsContainer" class="projects-container">
+                        <!-- Projects will be populated by JavaScript -->
+                        <div id="auditTrail" style="margin-top:2em;"></div>
+                    </div>
+                </div>
+
+                <!-- Tasks Page -->
+                <div id="tasksPage" class="page">
+                    <div class="page-header">
+                        <div class="page-title-section">
+                            <h2 data-i18n="page.tasks">Task-uri</h2>
+                            <p class="page-subtitle" data-i18n="tasks.subtitle">Lista completă a task-urilor</p>
+                        </div>
+                        <div class="page-actions">
+                            <button id="newTaskBtn" class="btn btn--primary">
+                                <i class="fas fa-plus"></i>
+                                Task Nou
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Modern filters/search toolbar -->
+                    <div class="filters-toolbar">
+                        <div class="toolbar-row">
+                            <div class="input-with-icon">
+                                <i class="fas fa-search" aria-hidden="true"></i>
+                                <input type="text" id="taskSearchInput" data-i18n-placeholder="search.tasks.placeholder" placeholder="Căutare task..." class="form-control">
+                            </div>
+                            <div class="toolbar-spacer"></div>
+                            <button id="searchBtn" class="btn btn--ghost btn--sm" title="Resetează filtrele">
+                                <i class="fas fa-rotate-left"></i>
+                                <span>Resetează</span>
+                            </button>
+                            <button id="toggleSavedFiltersBar" class="btn btn--ghost btn--sm" title="Afișează/Ascunde 'Filtre salvate'">
+                                <i class="fas fa-filter"></i>
+                                <span>Filtre salvate</span>
+                            </button>
+                        </div>
+                        <div class="toolbar-row filters-row">
+                            <select id="taskProjectFilter" class="form-control"></select>
+                            <select id="statusFilter" class="form-control">
+                                <option value="">Toate statusurile</option>
+                                <option value="Not Started" data-i18n="status.notStarted">Neînceput</option>
+                                <option value="In Progress" data-i18n="status.inProgress">În Progres</option>
+                                <option value="Done" data-i18n="status.done">Finalizat</option>
+                            </select>
+                            <select id="priorityFilter" class="form-control">
+                                <option value="">Toate prioritățile</option>
+                                <option value="Critical" data-i18n="priority.critical">Critic</option>
+                                <option value="High" data-i18n="priority.high">Mare</option>
+                                <option value="Medium" data-i18n="priority.medium">Medie</option>
+                                <option value="Low" data-i18n="priority.low">Mică</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="tasksTable" class="tasks-table">
+                        <!-- Tasks table will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Kanban Page -->
+                <div id="kanbanPage" class="page">
+                    <div class="page-header">
+                        <div class="page-title-section">
+                            <h2>Kanban Board</h2>
+                            <p class="page-subtitle" data-i18n="kanban.subtitle">Vizualizare task-uri în format board</p>
+                        </div>
+                        <div class="page-actions">
+                            <select id="kanbanProjectFilter" class="form-control">
+                                <option value="">Toate proiectele</option>
+                            </select>
+                            <button id="kanbanUndoBtn" class="btn btn--outline btn--sm" disabled>
+                                <i class="fas fa-rotate-left"></i>
+                                Undo
+                            </button>
+                            <button id="kanbanRedoBtn" class="btn btn--outline btn--sm" disabled>
+                                <i class="fas fa-rotate-right"></i>
+                                Redo
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="kanbanBoard" class="kanban-board">
+                        <div class="kanban-column" data-status="Not Started">
+                            <div class="column-header">
+                                <h3 data-i18n="kanban.notStarted">Neînceput</h3>
+                                <span class="task-count">0</span>
+                            </div>
+                            <div class="column-content tasks-container" data-status="Not Started">
+                                <!-- Tasks will be populated by JavaScript -->
+                            </div>
+                        </div>
+                        
+                        <div class="kanban-column" data-status="In Progress">
+                            <div class="column-header">
+                                <h3 data-i18n="kanban.inProgress">În Progres</h3>
+                                <span class="task-count">0</span>
+                            </div>
+                            <div class="column-content tasks-container" data-status="In Progress">
+                                <!-- Tasks will be populated by JavaScript -->
+                            </div>
+                        </div>
+                        
+                        <div class="kanban-column" data-status="Review">
+                            <div class="column-header">
+                                <h3 data-i18n="kanban.review">În Revizie &amp; Testare</h3>
+                                <span class="task-count">0</span>
+                            </div>
+                            <div class="column-content tasks-container" data-status="Review">
+                                <!-- Tasks will be populated by JavaScript -->
+                            </div>
+                        </div>
+                        
+                        <div class="kanban-column" data-status="Done">
+                            <div class="column-header">
+                                <h3>Finalizat</h3>
+                                <span class="task-count">0</span>
+                            </div>
+                            <div class="column-content tasks-container" data-status="Done">
+                                <!-- Tasks will be populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Team Page -->
+                <div id="teamPage" class="page">
+                    <div class="page-header">
+                        <div class="page-title-section">
+                            <h2>Echipa</h2>
+                            <p class="page-subtitle" data-i18n="team.subtitle">Membrii echipei și distribuția sarcinilor</p>
+                        </div>
+                        <div class="page-actions">
+                            <button id="inviteMemberBtn" class="btn btn--outline">
+                                <i class="fas fa-user-plus"></i>
+                                <span data-i18n="team.invite">Invită Membru</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="teamGrid" class="team-grid">
+                        <!-- Team members will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Time Tracking Page -->
+                <div id="time-trackingPage" class="page">
+                    <div class="page-header">
+                        <div class="page-title-section">
+                            <h2>Time Tracking</h2>
+                            <p class="page-subtitle" data-i18n="time.subtitle">Urmărește timpul petrecut pe proiecte</p>
+                        </div>
+                        <div class="page-actions">
+                            <div class="timer-section">
+                                <div class="timer-display">
+                                    <span id="timerDisplay">00:00:00</span>
+                                </div>
+                                <button id="timerStart" class="btn btn--primary">
+                                    <i class="fas fa-play"></i>
+                                    Start
+                                </button>
+                                <button id="timerStop" class="btn btn--secondary hidden">
+                                    <i class="fas fa-stop"></i>
+                                    Stop
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="time-tracking-grid">
+                        <!-- Focus Sessions (Pomodoro) -->
+                        <div class="card">
+                            <div class="card__header">
+                                <h3>Sesiuni de Focus (Pomodoro)</h3>
+                            </div>
+                            <div class="card__body">
+                                <div class="pomo-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end;">
+                                    <div>
+                                        <label class="form-label">Mod</label>
+                                        <select id="pomoMode" class="form-control">
+                                            <option value="focus">Focus</option>
+                                            <option value="short">Pauză scurtă</option>
+                                            <option value="long">Pauză lungă</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="form-label">Atribuie la task</label>
+                                        <select id="timeTaskSelect" class="form-control">
+                                            <option value="">— Fără task —</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="form-label">Durată Focus (min)</label>
+                                        <input id="pomoFocusMins" class="form-control" type="number" min="5" max="120" step="5" value="25" />
+                                    </div>
+                                    <div>
+                                        <label class="form-label">Pauză scurtă (min)</label>
+                                        <input id="pomoShortMins" class="form-control" type="number" min="1" max="30" step="1" value="5" />
+                                    </div>
+                                    <div>
+                                        <label class="form-label">Pauză lungă (min)</label>
+                                        <input id="pomoLongMins" class="form-control" type="number" min="5" max="60" step="5" value="15" />
+                                    </div>
+                                    <div>
+                                        <label class="form-label">Pauză lungă la fiecare</label>
+                                        <input id="pomoLongEvery" class="form-control" type="number" min="2" max="12" step="1" value="4" />
+                                    </div>
+                                    <div style="grid-column:1 / -1;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                                        <div class="pomo-timer" style="font:600 28px/1 var(--font-family);min-width:160px;">
+                                            <span id="pomoCountdown">25:00</span>
+                                            <small id="pomoPhase" style="margin-left:8px;color:var(--color-text-secondary)">Focus</small>
+                                        </div>
+                                        <div class="pomo-progress" style="flex:1;min-width:180px;height:10px;background:var(--color-card-border-inner);border-radius:999px;overflow:hidden;">
+                                            <div id="pomoProgressInner" style="height:100%;width:0%;background:var(--color-success);"></div>
+                                        </div>
+                                        <div id="pomoCycleInfo" class="text-muted" style="min-width:120px;text-align:right;">Cicluri: 0</div>
+                                    </div>
+                                    <div style="grid-column:1 / -1;display:flex;gap:8px;flex-wrap:wrap;">
+                                        <button id="pomoStart" class="btn btn--primary"><i class="fas fa-play"></i> Start</button>
+                                        <button id="pomoPause" class="btn btn--secondary" disabled><i class="fas fa-pause"></i> Pauză</button>
+                                        <button id="pomoResume" class="btn btn--secondary hidden"><i class="fas fa-play"></i> Continuă</button>
+                                        <button id="pomoSkip" class="btn btn--outline" disabled><i class="fas fa-forward"></i> Skip</button>
+                                        <label style="display:inline-flex;align-items:center;gap:6px;margin-left:auto;">
+                                            <input id="pomoAutoContinue" type="checkbox" checked /> Auto-continua ciclurile
+                                        </label>
+                                        <label style="display:inline-flex;align-items:center;gap:6px;">
+                                            <input id="pomoSound" type="checkbox" checked /> Sunet
+                                        </label>
+                                        <button id="pomoReset" class="btn btn--ghost" style="margin-left:auto;">Resetează</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card__header">
+                                <h3 data-i18n="time.today">Timp Astăzi</h3>
+                            </div>
+                            <div class="card__body">
+                                <div class="time-today">
+                                    <span class="time-value" id="todayTime">0h 0m</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card__header">
+                                <h3 data-i18n="time.recent">Intrări Recente</h3>
+                            </div>
+                            <div class="card__body">
+                                <div id="recentTimeEntries" class="time-entries">
+                                    <!-- Time entries will be populated by JavaScript -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reports Page -->
+                <div id="reportsPage" class="page">
+                    <div class="page-header">
+                        <div class="page-title-section">
+                            <h2>Rapoarte</h2>
+                            <p class="page-subtitle" data-i18n="reports.subtitle">Analytics și rapoarte de progres</p>
+                        </div>
+                        <div class="page-actions">
+                            <button id="reportsExportCsv" class="btn btn--outline">
+                                <i class="fas fa-download"></i>
+                                Export CSV
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Reports Filters -->
+                    <div class="filters-toolbar reports-filters" style="margin-bottom:16px;">
+                        <div class="toolbar-row" style="gap:8px;flex-wrap:wrap;align-items:center;">
+                            <select id="reportsProjectFilter" class="form-control" title="Filtrează după proiect" style="min-width:220px;">
+                                <option value="">Toate proiectele</option>
+                            </select>
+                            <select id="reportsUserFilter" class="form-control" title="Filtrează după membru" style="min-width:200px;">
+                                <option value="">Toți membrii</option>
+                            </select>
+                            <label style="display:flex;align-items:center;gap:6px;">
+                                <span style="color:var(--color-text-secondary);font-size:.9rem;">De la</span>
+                                <input type="date" id="reportsDateFrom" class="form-control" />
+                            </label>
+                            <label style="display:flex;align-items:center;gap:6px;">
+                                <span style="color:var(--color-text-secondary);font-size:.9rem;">Până la</span>
+                                <input type="date" id="reportsDateTo" class="form-control" />
+                            </label>
+                            <button id="reportsResetFilters" class="btn btn--ghost btn--sm" title="Resetează filtrele"><i class="fas fa-rotate-left"></i><span>Resetează</span></button>
+                        </div>
+                    </div>
+                    
+                    <div class="reports-grid">
+                            <!-- Gantt legend -->
+                            <div class="gantt-legend" aria-hidden="false" title="Legendă Gantt" data-i18n-title="gantt.legendTitle">
+                                <span class="inferred-badge" style="font-size:0.9em;vertical-align:middle;">⚠</span>
+                                <small style="margin-left:8px;" data-i18n="gantt.inferred">Date inferate — lipsă start/due completate din proiect sau setate implicit</small>
+                            </div>
+                            <button id="ganttBulkAddBtn" class="btn btn--outline" title="Adaugă toate task-urile proiectului în Gantt" data-i18n="gantt.bulkAddTitle">Adaugă proiect în Gantt</button>
+                        <div class="card">
+                            <div class="card__header">
+                                <h3>Progres pe Proiecte</h3>
+                            </div>
+                            <div class="card__body">
+                                <div class="chart-container" style="position: relative; height: 400px;">
+                                    <canvas id="projectsChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card__header">
+                                <h3>Productivitatea Echipei</h3>
+                            </div>
+                            <div class="card__body">
+                                <div class="chart-container" style="position: relative; height: 400px;">
+                                    <canvas id="teamProductivityChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card__header">
+                                <h3>Distribuția Statusurilor (Task-uri)</h3>
+                            </div>
+                            <div class="card__body">
+                                <div class="chart-container" style="position: relative; height: 360px;">
+                                    <canvas id="tasksStatusChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card__header">
+                                <h3>Task-uri Întârziate pe Proiect</h3>
+                            </div>
+                            <div class="card__body">
+                                <div class="chart-container" style="position: relative; height: 360px;">
+                                    <canvas id="overdueByProjectChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card__header">
+                                <h3>Încărcarea pe Membru (după Status)</h3>
+                            </div>
+                            <div class="card__body">
+                                <div class="chart-container" style="position: relative; height: 420px;">
+                                    <canvas id="workloadByAssigneeChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card__header">
+                                <h3>Throughput pe Săptămâni (task-uri finalizate)</h3>
+                            </div>
+                            <div class="card__body">
+                                <div class="chart-container" style="position: relative; height: 360px;">
+                                    <canvas id="throughputChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card__header">
+                                <h3>Aging WIP (task-uri în lucru)</h3>
+                            </div>
+                            <div class="card__body">
+                                <div id="agingWipTable" class="table" style="overflow:auto; max-height:420px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gantt Page -->
+                <div id="ganttPage" class="page">
+                    <div class="page-header">
+                        <div class="page-title-section">
+                                <h2 data-i18n="page.gantt">Diagramă Gantt</h2>
+                                <p class="page-subtitle" data-i18n="gantt.subtitle">Planificare temporală proiecte și task-uri</p>
+                            </div>
+                        <div class="page-actions">
+                            <select id="ganttProjectFilter" class="form-control">
+                                <option value="">Toate proiectele</option>
+                                <!-- Proiectele vor fi populate dinamic -->
+                            </select>
+                            <select id="ganttScale" class="form-control">
+                                <option value="day">Zilnic</option>
+                                <option value="week" selected data-i18n="gantt.scale.week">Săptămânal</option>
+                                <option value="month">Lunar</option>
+                            </select>
+                            <!-- Compact legend helper: opens modal with details -->
+                            <button id="ganttLegendBtn" class="btn btn--outline btn--sm" title="Legenda Gantt">
+                                <i class="fas fa-info-circle"></i>
+                            </button>
+                            <!-- (Interactive dependency creation is available via drag from the yellow handle on each bar) -->
+                        </div>
+                    <!-- Legend Modal relocated here -->
+                    <div id="ganttLegendModal" class="modal hidden" role="dialog" aria-modal="true" aria-hidden="true">
+                        <div class="modal-content">
+                            <button class="modal-close" data-dismiss="modal" aria-label="Închide">×</button>
+                            <h3>Legenda Gantt</h3>
+                            <div class="modal-body">
+                                <div class="gantt-legend-modal-row">
+                                    <span class="g-legend-icon legend-today" aria-hidden="true"></span>
+                                    <div class="g-legend-text"><strong data-i18n="gantt.todayTitle">Astăzi</strong> — <span data-i18n="gantt.todayDesc">Linia verticală marchează data curentă.</span></div>
+                                </div>
+                                <div class="gantt-legend-modal-row">
+                                    <span class="g-legend-icon legend-dep" aria-hidden="true"><svg width="20" height="12" viewBox="0 0 20 12" xmlns="http://www.w3.org/2000/svg"><path d="M1 6 H14 L11 3 M14 6 L11 9" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+                                    <div class="g-legend-text"><strong data-i18n="gantt.depTitle">Dependență</strong> — <span data-i18n="gantt.depDesc">Săgețile între bare indică dependențe Finish→Start; roșu = critic / neîndeplinit, gri = normal.</span></div>
+                                </div>
+                                <div class="gantt-legend-modal-row">
+                                    <span class="g-legend-icon legend-late" aria-hidden="true"></span>
+                                    <div class="g-legend-text"><strong data-i18n="gantt.lateTitle">Întârziat</strong> — <span data-i18n="gantt.lateDesc">Barele întârziate sunt evidențiate când data de finalizare este trecută și starea nu este "Done".</span></div>
+                                </div>
+                                <div class="gantt-legend-modal-row">
+                                    <span class="g-legend-icon legend-milestone" aria-hidden="true">◆</span>
+                                    <div class="g-legend-text"><strong data-i18n="gantt.milestoneTitle">Piatra de hotar</strong> — <span data-i18n="gantt.milestoneDesc">Evenimente punctuale afișate ca romburi.</span></div>
+                                </div>
+                                <div class="gantt-legend-modal-row">
+                                    <span class="g-legend-icon legend-progress" aria-hidden="true"></span>
+                                    <div class="g-legend-text"><strong data-i18n="gantt.progressTitle">Progres (%)</strong> — <span data-i18n="gantt.progressDesc">Bara de progres în interiorul unei activități arată procentul finalizat.</span></div>
+                                </div>
+                                <hr />
+                                <h4 data-i18n="gantt.shortGuideTitle">Scurt ghid</h4>
+                                <ul>
+                                    <li data-i18n="gantt.guide.click">Click pe o bară pentru detalii și pentru a edita task-ul.</li>
+                                    <li data-i18n="gantt.guide.drag">Folosește drag pentru a reprograma sau redimensionează pentru a schimba duratele.</li>
+                                    <li data-i18n="gantt.guide.critical">Dependențele critice sunt marcate când succesorul este întârziat — opțional putem calcula calea critică completă.</li>
+                                </ul>
+                            </div>
+                            <div class="modal-footer">
+                                <button class="btn" data-dismiss="modal">Închide</button>
+                            </div>
+                        </div>
+                    </div>
+                    </div>
+                    <div class="gantt-container">
+                        <div class="gantt-sidebar" id="ganttTaskList"></div>
+                        <div class="gantt-timeline-wrapper">
+                            <div class="gantt-timeline-header" id="ganttTimelineHeader"></div>
+                            <div class="gantt-timeline-body" id="ganttTimelineBody"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <!-- Project Modal -->
+    <div id="projectModal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="projectModalTitle">Proiect Nou</h3>
+                <button class="modal-close btn btn--secondary">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="projectForm">
+                    <div class="form-group">
+                        <label class="form-label">Nume Proiect</label>
+                        <input type="text" id="projectName" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" data-i18n="task.desc.placeholder">Descriere</label>
+                        <textarea id="projectDescription" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Data Start</label>
+                            <input type="date" id="projectStartDate" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Data Finalizare</label>
+                            <input type="date" id="projectDueDate" class="form-control">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Prioritate</label>
+                            <select id="projectPriority" class="form-control">
+                                <option value="Low">Mică</option>
+                                <option value="Medium">Medie</option>
+                                <option value="High">Mare</option>
+                                <option value="Critical">Critică</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Status</label>
+                            <select id="projectStatus" class="form-control">
+                                <option value="Not Started">Neînceput</option>
+                                <option value="In Progress">În Progres</option>
+                                <option value="Completed">Finalizat</option>
+                                <option value="On Hold">În Așteptare</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <!-- Subtasks removed from Project modal - subtasks belong to tasks, not projects -->
+            <div class="modal-footer">
+                <button class="btn btn--outline modal-close" data-i18n="btn.cancel">Anulează</button>
+                <button id="saveProjectBtn" class="btn btn--primary" data-i18n="btn.save">Salvează</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gantt Config Modal -->
+    <div id="ganttConfigModal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="ganttConfigTitle">Configurează în Gantt</h3>
+                <button class="modal-close btn btn--secondary">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="ganttConfigForm">
+                    <input type="hidden" id="ganttTaskId">
+                    <label>Start date: <input type="date" id="ganttStartDate" class="form-control"></label>
+                    <label>End date: <input type="date" id="ganttEndDate" class="form-control"></label>
+                    <label>Culoare: <input type="color" id="ganttColor" class="form-control" value="#1FB8CD"></label>
+                    <label>Vizibil în Gantt: <select id="ganttVisible" class="form-control"><option value="1">Da</option><option value="0">Nu</option></select></label>
+                    <label style="display:block;margin-top:10px">Dependențe (selectați task-urile de care depinde acesta):</label>
+                    <select id="ganttDependencies" multiple class="form-control" size="6" style="width:100%;box-sizing:border-box;margin-bottom:8px"></select>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button id="saveGanttConfigBtn" class="btn btn--primary" data-i18n="btn.save">Salvează</button>
+                <button class="modal-close btn btn--secondary" data-i18n="btn.cancel">Anulează</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gantt Save Confirmation Modal -->
+    <div id="ganttSaveConfirmModal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="ganttSaveConfirmTitle">Confirmă modificări Gantt</h3>
+                <button class="modal-close btn btn--secondary">×</button>
+            </div>
+            <div class="modal-body">
+                <p class="gantt-confirm-msg">Salvezi modificările?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="gantt-confirm-save btn btn--primary" data-i18n="btn.save">Salvează</button>
+                <button class="gantt-confirm-cancel modal-close btn btn--secondary" data-i18n="btn.cancel">Anulează</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Password Reset Modal (Supabase recovery flow) -->
+    <div id="passwordResetModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Setează o parolă nouă</h3>
+                <button class="modal-close btn btn--secondary">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="passwordResetForm">
+                    <div class="form-group">
+                        <label class="form-label" for="prNew">Parolă nouă</label>
+                        <input id="prNew" type="password" class="form-control" placeholder="minim 6 caractere" autocomplete="new-password" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="prConfirm">Confirmă parola</label>
+                        <input id="prConfirm" type="password" class="form-control" placeholder="repetă parola" autocomplete="new-password" required />
+                    </div>
+                    <div id="passwordResetError" class="auth-error hidden" role="alert"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-close btn btn--outline">Anulează</button>
+                <button id="passwordResetSubmit" class="btn btn--primary">Salvează parola</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Modal -->
+    <div id="taskModal" class="modal hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="taskModalTitle">Task Nou</h3>
+                <button class="modal-close btn btn--secondary">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="taskForm">
+                    <div class="form-group">
+                        <label class="form-label">Titlu Task</label>
+                        <input type="text" id="taskTitle" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" data-i18n="task.desc.placeholder">Descriere</label>
+                        <textarea id="taskDescription" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Proiect</label>
+                            <select id="taskProject" class="form-control" required>
+                                <!-- Projects will be populated by JavaScript -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Asignat la</label>
+                            <select id="taskAssignedTo" class="form-control">
+                                <option value="">Neaseignat</option>
+                                <!-- Users will be populated by JavaScript -->
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Prioritate</label>
+                            <select id="taskPriority" class="form-control">
+                                <option value="Low">Mică</option>
+                                <option value="Medium">Medie</option>
+                                <option value="High">Mare</option>
+                                <option value="Critical">Critică</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Data Scadentă</label>
+                            <input type="date" id="taskDueDate" class="form-control">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Status</label>
+                            <select id="taskStatus" class="form-control">
+                                <option value="Not Started">Neînceput</option>
+                                <option value="In Progress">În Progres</option>
+                                <option value="Review">În Revizie &amp; Testare</option>
+                                <option value="Done">Finalizat</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Ore Estimate</label>
+                        <input type="number" id="taskEstimatedHours" class="form-control" min="0" step="0.5">
+                    </div>
+                </form>
+            </div>
+            <!-- Subtasks area (used by JS to add subtasks in the Task modal) -->
+            <div class="modal-body-subtasks" style="padding:0 20px 16px 20px;">
+                <h4 style="margin:8px 0">Subtasks</h4>
+                <div id="subtasksList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;max-height:180px;overflow:auto;padding-right:8px;"></div>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <input type="text" id="newSubtaskInput" class="form-control" placeholder="Adaugă subtask...">
+                    <button id="addSubtaskBtn" type="button" class="btn btn--primary btn--sm">Adaugă</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn--outline modal-close" data-i18n="btn.cancel">Anulează</button>
+                <button id="saveTaskBtn" class="btn btn--primary" data-i18n="btn.save">Salvează</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Member Modal -->
+    <div id="memberModal" class="modal hidden" data-backdrop-dismissable="false">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="memberModalTitle">Adaugă Membru</h3>
+                <button class="modal-close btn btn--secondary">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="memberForm">
+                    <div class="form-group">
+                        <label class="form-label">Nume</label>
+                        <input type="text" id="memberName" class="form-control" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Rol</label>
+                        <input type="text" id="memberRole" class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Avatar (Emoji)</label>
+                        <input type="text" id="memberAvatar" class="form-control" placeholder="👩‍💻 sau alege mai jos" />
+                        <div class="emoji-palette" style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+                            <button type="button" class="emoji-btn">👩‍💻</button>
+                            <button type="button" class="emoji-btn">👨‍💻</button>
+                            <button type="button" class="emoji-btn">🧑‍🔧</button>
+                            <button type="button" class="emoji-btn">👩‍🎨</button>
+                            <button type="button" class="emoji-btn">👨‍🔬</button>
+                            <button type="button" class="emoji-btn">👥</button>
+                            <button type="button" class="emoji-btn">👤</button>
+                            <button type="button" class="emoji-btn">🤝</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-close btn btn--outline" data-i18n="btn.cancel">Anulează</button>
+                <button id="saveMemberBtn" class="btn btn--primary" data-i18n="btn.save">Salvează</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="dataStore.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script type="module" src="supabaseAdapter.js"></script>
+    <!-- TEMPORARY: Migration script; remove after running window.runLocalMigration() once -->
+    <script src="ui/toast.js"></script>
+    <script src="gantt.js"></script>
+    <script src="app.js"></script>
+    <script src="kanbanEnhancements.js"></script>
+</body>
+</html>
