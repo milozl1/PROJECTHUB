@@ -720,6 +720,28 @@ class ProjectHub {
         document.getElementById('mobileSidebarToggle').addEventListener('click', () => {
             this.toggleMobileSidebar();
         });
+        // Close mobile sidebar when clicking a nav item (on small screens)
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', () => {
+                const sidebar = document.querySelector('.sidebar');
+                if(window.innerWidth <= 900 && sidebar && sidebar.classList.contains('mobile-open')){
+                    this._closeMobileSidebar();
+                }
+            });
+        });
+        // ESC closes the mobile sidebar
+        document.addEventListener('keydown', (e)=>{
+            if(e.key === 'Escape'){
+                const sidebar = document.querySelector('.sidebar');
+                if(window.innerWidth <= 900 && sidebar && sidebar.classList.contains('mobile-open')){
+                    this._closeMobileSidebar();
+                }
+            }
+        });
+        // Auto-clean on resize from mobile to desktop
+        window.addEventListener('resize', ()=>{
+            if(window.innerWidth > 900){ this._closeMobileSidebar(true); }
+        });
 
         // Theme toggle
         document.getElementById('themeToggle').addEventListener('click', () => {
@@ -994,7 +1016,41 @@ class ProjectHub {
 
     toggleMobileSidebar() {
         const sidebar = document.querySelector('.sidebar');
-        sidebar.classList.toggle('mobile-open');
+        if(!sidebar) return;
+        if(sidebar.classList.contains('mobile-open')){ this._closeMobileSidebar(); }
+        else { this._openMobileSidebar(); }
+    }
+
+    _ensureSidebarBackdrop(){
+        let backdrop = document.getElementById('sidebarBackdrop');
+        if(!backdrop){
+            backdrop = document.createElement('div');
+            backdrop.id = 'sidebarBackdrop';
+            backdrop.className = 'sidebar-backdrop';
+            document.body.appendChild(backdrop);
+        }
+        return backdrop;
+    }
+
+    _openMobileSidebar(){
+        const sidebar = document.querySelector('.sidebar'); if(!sidebar) return;
+        sidebar.classList.add('mobile-open');
+        const backdrop = this._ensureSidebarBackdrop();
+        backdrop.classList.add('visible');
+        document.body.classList.add('no-scroll');
+        // click outside closes
+        if(!backdrop._bound){
+            backdrop.addEventListener('click', ()=> this._closeMobileSidebar());
+            backdrop._bound = true;
+        }
+    }
+
+    _closeMobileSidebar(force=false){
+        const sidebar = document.querySelector('.sidebar'); if(!sidebar) return;
+        sidebar.classList.remove('mobile-open');
+        const backdrop = document.getElementById('sidebarBackdrop');
+        if(backdrop) backdrop.classList.remove('visible');
+        document.body.classList.remove('no-scroll');
     }
 
     navigateToPage(page) {
@@ -4272,18 +4328,41 @@ class ProjectHub {
         const updatedEl = document.getElementById('noteUpdatedAt');
         const delBtn = document.getElementById('deleteNoteBtn');
         const toolbar = document.querySelector('.editor-toolbar');
+        const notesContainer = document.querySelector('.notes-container');
+        const notesBackBtn = document.getElementById('notesBackBtn');
         const current = this._notes.pages.find(p=> p.id === this._notes.selectedPageId) || null;
         if(current){
             titleInput.value = current.title || '';
             editor.innerHTML = current.content || '';
             updatedEl.textContent = 'Modificat: ' + new Date(current.updatedAt||Date.now()).toLocaleString('ro-RO');
             titleInput.disabled = false; editor.contentEditable = 'true'; delBtn.disabled = false; toolbar.classList.remove('disabled');
+            // Mobile: slide in editor
+            if(window.innerWidth <= 900 && notesContainer){
+                notesContainer.classList.add('show-editor');
+                const edWrap = document.querySelector('.notes-editor');
+                if(edWrap) edWrap.classList.add('show');
+            }
         } else {
             titleInput.value = '';
             editor.innerHTML = '<p>Selectează sau adaugă o notă din listă.</p>';
             updatedEl.textContent = '';
             titleInput.disabled = true; editor.contentEditable = 'false'; delBtn.disabled = true; toolbar.classList.add('disabled');
+            if(window.innerWidth <= 900 && notesContainer){
+                notesContainer.classList.remove('show-editor');
+                const edWrap = document.querySelector('.notes-editor');
+                if(edWrap) edWrap.classList.remove('show');
+            }
         }
+        // Back button (mobile only): return to list
+        if(notesBackBtn && !notesBackBtn._bound){
+            notesBackBtn.addEventListener('click', ()=>{
+                if(notesContainer){ notesContainer.classList.remove('show-editor'); }
+                const edWrap = document.querySelector('.notes-editor'); if(edWrap) edWrap.classList.remove('show');
+            });
+            notesBackBtn._bound = true;
+        }
+        // Show back button on mobile
+        if(notesBackBtn){ notesBackBtn.style.display = (window.innerWidth <= 900 ? '' : 'none'); }
         // Saving indicator helpers
         if(toolbar && !toolbar._saveLabel){
             const lab = document.createElement('span'); lab.className='save-indicator'; lab.textContent='';

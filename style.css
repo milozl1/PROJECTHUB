@@ -313,6 +313,9 @@ body {
   padding: 0;
 }
 
+/* Prevent background scroll when mobile sidebar is open */
+body.no-scroll { overflow: hidden; }
+
 *,
 *::before,
 *::after {
@@ -996,6 +999,29 @@ select.form-control {
     z-index: 100;
 }
 
+/* Mobile layout: off-canvas sidebar */
+@media (max-width: 900px) {
+    .app-container { grid-template-columns: 1fr !important; height: 100dvh; }
+    .app-container.sidebar-collapsed { grid-template-columns: 1fr !important; }
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: -280px;
+        width: 280px;
+        height: 100dvh;
+        box-shadow: var(--shadow-lg);
+        z-index: 100; /* ensure above backdrop */
+    }
+    .sidebar.mobile-open { left: 0; }
+    .mobile-sidebar-toggle { display: inline-flex; }
+    .main-header { grid-template-columns: 1fr auto; }
+    .header-center { display: none; }
+    .page-content { padding: var(--space-16); }
+    /* Backdrop for mobile sidebar */
+    .sidebar-backdrop, #sidebarBackdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.35); backdrop-filter: blur(1px); opacity: 0; pointer-events: none; transition: opacity var(--duration-normal) var(--ease-standard); z-index: 90; }
+    .sidebar-backdrop.visible, #sidebarBackdrop.visible { opacity: 1; pointer-events: auto; }
+}
+
 .sidebar-header {
     padding: var(--space-20);
     border-bottom: 1px solid var(--color-border);
@@ -1168,7 +1194,7 @@ select.form-control {
 .subtasks-panel { max-width: 100%; width: 100%; }
 
 /* ===== Notes (OneNote-like) ===== */
-.notes-container { display:flex; gap:0; height: calc(100vh - 170px); border:1px solid var(--color-card-border); border-radius: 12px; overflow:hidden; background: var(--color-surface); box-shadow: var(--shadow-sm); }
+.notes-container { display:flex; gap:0; height: calc(100vh - 170px); border:1px solid var(--color-card-border); border-radius: 12px; overflow:hidden; background: var(--color-surface); box-shadow: var(--shadow-sm); position: relative; }
 .notes-sidebar { width: 260px; border-right:1px solid var(--color-card-border); padding: 14px; display:flex; flex-direction:column; gap:12px; background: var(--color-surface); }
 .notes-sections-header { display:flex; align-items:center; justify-content:space-between; font-weight:600; margin-top:2px; }
 .notes-sections-header .btn { padding: 6px 10px; }
@@ -1238,6 +1264,28 @@ select.form-control {
     .notes-sidebar { display:none; }
     .notes-list { width: 40%; }
 }
+/* Mobile-first reflow for Notes */
+@media (max-width: 900px){
+    .notes-container{ height: calc(100dvh - 140px); border-radius: 10px; }
+    .notes-sidebar{ display:none; }
+    .notes-list{ width: 100%; border-right: none; border-bottom: 1px solid var(--color-card-border); }
+    .notes-editor{ position: absolute; inset: 0; background: var(--color-surface); transform: translateX(100%); transition: transform var(--duration-normal) var(--ease-standard); z-index: 2; }
+    .notes-editor.show{ transform: translateX(0%); }
+    .notes-container.show-editor .notes-list{ filter: blur(2px); pointer-events: none; }
+    /* Back button inside editor header */
+    .notes-editor-header .notes-back{ display:inline-flex !important; }
+    .note-title-input{ font-size: 1.05rem; }
+    .editor{ padding: 14px 14px; }
+}
+
+/* Ensure sidebar logo doesn’t overlap header buttons when collapsed */
+.app-container.sidebar-collapsed .sidebar-header .logo{ padding-left: 8px; }
+.app-container.sidebar-collapsed .sidebar-header .logo i{ font-size: 18px; }
+.app-container.sidebar-collapsed .sidebar-toggle{ z-index: 2; }
+
+/* Utilities FAB spacing to avoid overlap with bottom UI buttons */
+#utilitiesFab{ bottom: 18px; right: 18px; }
+#utilitiesPanel{ bottom: 74px; right: 18px; }
 /* Remove former max-width caps that tăiau contentul în diverse breakpoints */
 
 /* Allow project name and description to wrap instead of expanding horizontally */
