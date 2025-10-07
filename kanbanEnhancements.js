@@ -26,32 +26,46 @@
             this.kanbanRedoStack = [];
             this.updateKanbanHistoryButtons();
         };
-        hub.applyKanbanAction = function(action){
+        hub.applyKanbanAction = async function(action){
             switch(action.type){
                 case 'move': {
-                    this.updateTaskStatus(action.taskId, action.to, { skipHistory:true, skipRender:true });
+                    await this.updateTaskStatus(action.taskId, action.to, { skipHistory:true, skipRender:true, silent:true });
                     if(action.prevOrder) this.kanbanOrder = JSON.parse(JSON.stringify(action.prevOrder));
                     break;
                 }
                 case 'edit-title': {
                     const t = this.data.tasks.find(t=> t.id === action.taskId);
-                    if(t) t.title = action.to;
-                    this.store.save();
+                    if(!t) break;
+                    t.title = action.to;
+                    try{
+                        if(this._usingSupabase && this.store && typeof this.store.updateTask === 'function'){
+                            await this.store.updateTask(t.id, { title: t.title });
+                        } else if(this.store && typeof this.store.save === 'function'){
+                            this.store.save();
+                        }
+                    }catch(_){ }
                     break;
                 }
             }
         };
-        hub.applyKanbanInverseAction = function(action){
+        hub.applyKanbanInverseAction = async function(action){
             switch(action.type){
                 case 'move': {
-                    this.updateTaskStatus(action.taskId, action.from, { skipHistory:true, skipRender:true });
+                    await this.updateTaskStatus(action.taskId, action.from, { skipHistory:true, skipRender:true, silent:true });
                     if(action.prevOrder) this.kanbanOrder = JSON.parse(JSON.stringify(action.prevOrder));
                     break;
                 }
                 case 'edit-title': {
                     const t = this.data.tasks.find(t=> t.id === action.taskId);
-                    if(t) t.title = action.from;
-                    this.store.save();
+                    if(!t) break;
+                    t.title = action.from;
+                    try{
+                        if(this._usingSupabase && this.store && typeof this.store.updateTask === 'function'){
+                            await this.store.updateTask(t.id, { title: t.title });
+                        } else if(this.store && typeof this.store.save === 'function'){
+                            this.store.save();
+                        }
+                    }catch(_){ }
                     break;
                 }
             }
@@ -92,23 +106,42 @@
 
         // Override updateTaskStatus to accept opts
         const originalUpdateTaskStatus = hub.updateTaskStatus.bind(hub);
-        hub.updateTaskStatus = function(taskId, newStatus, opts = {}){
-            const task = this.data.tasks.find(t=> t.id === taskId);
-            if(!task) return;
-            if(task.status === newStatus) return;
-            const prevStatus = task.status;
-            const prevOrder = this.captureKanbanOrder();
-            task.status = newStatus;
-            this.store.save();
-            if(this.currentPage === 'kanban' && !opts.skipRender){
-                this.updateKanbanBoard();
-            }
-            if(!opts.skipHistory){
-                this.pushKanbanHistory({ type:'move', taskId, from: prevStatus, to: newStatus, prevOrder });
-            }
-            if(!opts.silent){
-                const msg = this.t ? this.t('status.updated').replace('{status}', this.translateStatus(newStatus)) : `Status task actualizat la ${this.translateStatus(newStatus)}`;
-                this.showNotification(msg, 'success');
+        hub.updateTaskStatus = async function(taskId, newStatus, opts = {}){
+            try{
+                const task = this.data.tasks.find(t=> t.id === taskId);
+                if(!task) return;
+                if(task.status === newStatus) return;
+                const prevStatus = task.status;
+                const prevOrder = this.captureKanbanOrder();
+                // Persist change
+                task.status = newStatus;
+                try{
+                    if(this._usingSupabase && this.store && typeof this.store.updateTask === 'function'){
+                        const progress = (this.computeTaskProgress ? this.computeTaskProgress(task) : (task.progress||0));
+                        await this.store.updateTask(taskId, { status: newStatus, progress });
+                    } else if(this.store && typeof this.store.save === 'function') {
+                        this.store.save();
+                    }
+                }catch(_){ }
+                // History
+                if(!opts.skipHistory){
+                    this.pushKanbanHistory({ type:'move', taskId, from: prevStatus, to: newStatus, prevOrder });
+                }
+                // Re-render Kanban and Tasks
+                if(!opts.skipRender){
+                    if(this.currentPage === 'kanban') this.updateKanbanBoard();
+                    try{ this.renderTasks && this.renderTasks(); }catch(_){ }
+                }
+                // Notification
+                if(!opts.silent){
+                    const msg = this.t ? this.t('status.updated').replace('{status}', this.translateStatus(newStatus)) : `Status task actualizat la ${this.translateStatus(newStatus)}`;
+                    this.showNotification(msg, 'success');
+                }
+                // Keep aggregates in sync
+                try{ this.recalculateAllProjectProgresses && this.recalculateAllProjectProgresses(); }catch(_){ }
+            }catch(_){
+                // Fallback to original if something goes wrong
+                try{ originalUpdateTaskStatus(taskId, newStatus); }catch(__){}
             }
         };
 
@@ -189,7 +222,7 @@
                     }
                 }
             });
-            document.addEventListener('drop', (e) => {
+            document.addEventListener('drop', async (e) => {
                 const zone = e.target.closest('.tasks-container');
                 if (!zone) return;
                 e.preventDefault();
@@ -199,7 +232,7 @@
                 const task = hub.data.tasks.find(t=> t.id === taskId);
                 const prevStatus = task ? task.status : null;
                 const prevOrder = hub.captureKanbanOrder();
-                hub.updateTaskStatus(taskId, newStatus, { skipRender:true, skipHistory:true, silent:true });
+                await hub.updateTaskStatus(taskId, newStatus, { skipRender:true, skipHistory:true, silent:true });
                 hub.persistColumnOrder(zone);
                 hub.pushKanbanHistory({ type:'move', taskId, from: prevStatus, to: newStatus, prevOrder });
                 hub.updateKanbanBoard();
@@ -220,7 +253,7 @@
             const blurHandler = () => { hub.commitInlineEdit(el); };
             el.addEventListener('blur', blurHandler, { once:true });
         };
-        hub.commitInlineEdit = function(el){
+        hub.commitInlineEdit = async function(el){
             if(!el.dataset.editing) return;
             el.contentEditable = 'false';
             el.classList.remove('editing');
@@ -230,7 +263,13 @@
             if(task && newTitle && newTitle !== task.title){
                 const prevTitle = task.title;
                 task.title = newTitle;
-                hub.store.save();
+                try{
+                    if(hub._usingSupabase && hub.store && typeof hub.store.updateTask === 'function'){
+                        await hub.store.updateTask(task.id, { title: task.title });
+                    } else if(hub.store && typeof hub.store.save === 'function'){
+                        hub.store.save();
+                    }
+                }catch(_){ }
                 hub.pushKanbanHistory({ type:'edit-title', taskId, from: prevTitle, to: newTitle });
                 const tmsg = hub.t ? hub.t('task.titleUpdated') : 'Titlu task actualizat';
                 hub.showNotification(tmsg, 'success');
