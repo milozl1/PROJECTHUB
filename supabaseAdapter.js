@@ -99,10 +99,17 @@ export const SupabaseStore = {
     const tagsById = Object.fromEntries((tagsRes.data||[]).map(t=> [t.id, t]));
     // Reattach subtasks to tasks for in-app compatibility
     const subtasksByTask = {};
-    (subtasksRes.data||[]).forEach(st=>{ (subtasksByTask[st.task_id] ||= []).push({ id: st.id, title: st.title, completed: st.completed, startDate: st.start_date, dueDate: st.due_date }); });
+    (subtasksRes.data||[]).forEach(st=>{
+      const key = String(st.task_id);
+      (subtasksByTask[key] ||= []).push({ id: String(st.id), title: st.title, completed: st.completed, startDate: st.start_date, dueDate: st.due_date });
+    });
 
     const depsByTask = {};
-    (depsRes.data||[]).forEach(d=> { (depsByTask[d.successor_task_id] ||= []).push(d.predecessor_task_id); });
+    (depsRes.data||[]).forEach(d=> {
+      const succ = String(d.successor_task_id);
+      const pred = String(d.predecessor_task_id);
+      (depsByTask[succ] ||= []).push(pred);
+    });
 
     const projectTagsByProject = {};
     (projTagsRes.data||[]).forEach(pt=> { (projectTagsByProject[pt.project_id] ||= []).push(tagsById[pt.tag_id]?.name); });
@@ -111,15 +118,15 @@ export const SupabaseStore = {
     (taskTagsRes.data||[]).forEach(tt=> { (taskTagsByTask[tt.task_id] ||= []).push(tagsById[tt.tag_id]?.name); });
 
     const tasks = (tasksRes.data||[]).map(t => ({
-      id: t.id,
-      projectId: t.project_id,
+      id: String(t.id),
+      projectId: t.project_id != null ? String(t.project_id) : '',
       title: t.title,
       description: t.description,
       startDate: t.start_date,
       dueDate: t.due_date,
       status: t.status,
       priority: t.priority,
-      assignedTo: t.assigned_to,
+      assignedTo: t.assigned_to != null ? String(t.assigned_to) : '',
       estimatedHours: t.estimated_hours,
       actualHours: t.actual_hours,
       progress: t.progress,
@@ -127,13 +134,13 @@ export const SupabaseStore = {
       _ganttVisible: t.gantt_visible ? 1 : 0,
       milestone: t.milestone,
       sortIndex: typeof t.sort_index === 'number' ? t.sort_index : undefined,
-      dependencies: depsByTask[t.id] || [],
+      dependencies: depsByTask[String(t.id)] || [],
       tags: (taskTagsByTask[t.id]||[]).filter(Boolean),
-      subtasks: subtasksByTask[t.id] || []
+      subtasks: subtasksByTask[String(t.id)] || []
     }));
 
     const projects = (projectsRes.data||[]).map(p => ({
-      id: p.id,
+      id: String(p.id),
       name: p.name,
       description: p.description,
       status: p.status,
@@ -150,7 +157,7 @@ export const SupabaseStore = {
       projects,
       tasks,
       users: (usersRes.data||[]).map(u=> ({
-        id: u.id,
+        id: String(u.id),
         name: u.name,
         email: u.email,
         role: u.role,
@@ -212,12 +219,12 @@ export const SupabaseStore = {
       return;
     }
     this._setDiag('addTask');
-    const newId = data.id;
-    task.id = newId;
+  const newId = data.id;
+  task.id = String(newId);
     // optimistic local push
     if(window.projectHub && window.projectHub.data){
       const clone = { ...task };
-      window.projectHub.data.tasks.push(clone);
+  window.projectHub.data.tasks.push({ ...clone, id: String(clone.id), projectId: clone.projectId != null ? String(clone.projectId) : '', assignedTo: clone.assignedTo ? String(clone.assignedTo) : '' });
     }
     // Subtasks
     if(Array.isArray(task.subtasks) && task.subtasks.length){
@@ -236,21 +243,75 @@ export const SupabaseStore = {
     return newId;
   },
   async updateTask(id, partial){
+    // Normalize payload: convert empty strings to null, coerce numeric strings where appropriate
     const payload = {};
     const map = {
-      projectId:'project_id', description:'description', title:'title', status:'status', priority:'priority', startDate:'start_date', dueDate:'due_date', assignedTo:'assigned_to', estimatedHours:'estimated_hours', actualHours:'actual_hours', progress:'progress', color:'color', milestone:'milestone', sortIndex:'sort_index'
+      projectId:'project_id',
+      description:'description',
+      title:'title',
+      status:'status',
+      priority:'priority',
+      startDate:'start_date',
+      dueDate:'due_date',
+      assignedTo:'assigned_to',
+      estimatedHours:'estimated_hours',
+      actualHours:'actual_hours',
+      progress:'progress',
+      color:'color',
+      milestone:'milestone',
+      sortIndex:'sort_index'
     };
-    Object.entries(map).forEach(([k,v])=> { if(k in partial) payload[v] = partial[k]; });
+    const normalize = (val, col) => {
+      // treat empty string as null for nullable DB cols
+      if(val === '') return null;
+      // coerce numbers
+      if(col === 'estimated_hours' || col === 'actual_hours' || col === 'sort_index'){
+        if(val === null || val === undefined || val === '') return null;
+        const n = Number(val);
+        return isNaN(n) ? null : n;
+      }
+      // dates
+      if(col === 'start_date' || col === 'due_date'){
+        return val || null;
+      }
+      // foreign keys: allow numeric strings to numbers; keep UUIDs as-is
+      if(col === 'project_id' || col === 'assigned_to'){
+        if(val === null || val === undefined || val === '') return null;
+        if(typeof val === 'string' && /^\d+$/.test(val)) return Number(val);
+        return val;
+      }
+      return val;
+    };
+    Object.entries(map).forEach(([k,v])=> {
+      if(k in partial) payload[v] = normalize(partial[k], v);
+    });
     if('_ganttVisible' in partial) payload.gantt_visible = !!partial._ganttVisible;
+    // Optional archive support if column exists
+    if('isArchived' in partial) payload.is_archived = !!partial.isArchived;
+
     if(Object.keys(payload).length){
-  const { error } = await supabase.from('tasks').update(payload).eq('id', id);
-  if(error){ console.error('updateTask error', error); this._setDiag('updateTask', error); try { if(window.Toast) window.Toast.push('Task update failed: ' + (error.message||error.code||'unknown'), 'error'); } catch(e){} }
-  else this._setDiag('updateTask');
+      const { error } = await supabase.from('tasks').update(payload).eq('id', id);
+      if(error){
+        console.error('updateTask error', error);
+        this._setDiag('updateTask', error);
+        try { if(window.Toast) window.Toast.push('Task update failed: ' + (error.message||error.code||'unknown'), 'error'); } catch(e){}
+      } else {
+        this._setDiag('updateTask');
+      }
       this._cache = null;
-      // local mirror update
+      // local mirror update (robust id compare)
       if(window.projectHub && window.projectHub.data){
-        const t = window.projectHub.data.tasks.find(tsk=> tsk.id === id);
-        if(t) Object.assign(t, partial);
+        const t = window.projectHub.data.tasks.find(tsk=> String(tsk.id) === String(id));
+        if(t){
+          // apply same normalization for local mirror for consistency
+          const localPatch = { ...partial };
+          if('assignedTo' in localPatch && localPatch.assignedTo === '') localPatch.assignedTo = null;
+          if('projectId' in localPatch && localPatch.projectId === '') localPatch.projectId = t.projectId; // project cannot be null in app; keep old if emptied
+          if('estimatedHours' in localPatch){
+            const n = Number(localPatch.estimatedHours); localPatch.estimatedHours = isNaN(n) ? 0 : n;
+          }
+          Object.assign(t, localPatch);
+        }
       }
       try { await this.addAudit('update','task', id, `Task updated: ${Object.keys(partial).join(', ')}`); } catch(e){}
     }
